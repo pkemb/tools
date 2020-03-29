@@ -30,7 +30,7 @@ check_file $TLS_KEY
 check_file $TLS_CRT
 
 if [ ! $1 ]; then
-    echo "Usage: `basename $0` start|stop"
+    echo "Usage: `basename $0` start|stop|restart"
     exit 1
 fi
 
@@ -45,6 +45,10 @@ if [ $1 = "start" ]; then
        > ngrokd.log 2>&1  &
 elif [ $1 = "stop" ]; then
     killall $NGROKD
+elif [ $1 = "restart" ]; then
+    $0 stop
+    sleep 1
+    $0 start
 else
     echo "unknow parameter: $1"
 fi
