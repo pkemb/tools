@@ -1,0 +1,12 @@
+[Unit]
+Description=enter your personalized description
+
+[Service]
+Type=simple
+ExecStart=/path/to/ngrok -config=/path/to/ngrok.cfg -log=stdout start-all 2>&1 &
+ExecReload=/bin/kill -HUP $MAINPID
+Restart=always
+RestartSec=10s
+
+[Install]
+WantedBy=multi-user.target
