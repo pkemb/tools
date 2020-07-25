@@ -39,7 +39,7 @@ function add_books()
 		return
 	fi
 	
-	for f in $PWD/*.azw3 $PWD/*.mobi $PWD/*.MOBI $PWD/*.azw $PWD/*.epub $PWD/*.EPUB $PWD/*.ebk3
+	for f in *.azw3 *.mobi *.MOBI *.azw *.epub *.EPUB *.ebk3
 	do
 		if [[ -f "$f" ]]
 		then
