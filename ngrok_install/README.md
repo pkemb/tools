@@ -19,24 +19,18 @@ GOARCH_server=
 GOARCH_client=
 ```
 
-推荐使用`systemd`来管理客户端和服务端的启动，省事、省心、有保障。[ngrok_server_domain.service](ngrok_service_domain.service)是服务端的示例配置，有一些本地化的东西需要配置，包括：
-* 使用自己的域名来重命名此文件。
-* 描述信息。
-* `ngrokd`的绝对地址
-* `device.key`的绝对路径
-* `device.crt`的绝对路径
-* 服务器的端口
+编译成功之后，会自动生成`ngrokd.sh`和`ngrok_server.service`文件。
+
+推荐使用`systemd`来管理客户端和服务端的启动，省事、省心、有保障。[ngrok_client.service](ngrok_client.service)是客户端的示例配置，有一些本地化的东西需要配置。
 
 创建一个指向此文件的软链接，并放到`/lib/systemd/system`目录下，即可使用以下命令来管理服务的启动与停止：
 ```shell
 # 启动服务
-systemctl start ngrok_server_domain
+systemctl start ngrok_client
 # 停止服务
-systemctl stop ngrok_server_domain
+systemctl stop ngrok_client
 # 打开开机自启动
-systemctl enable ngrok_server_domain
+systemctl enable ngrok_client
 # 关闭开机自启动
-systemctl disable ngrok_server_domain
+systemctl disable ngrok_client
 ```
-
-[ngrok_client_domian.service](ngrok_client_domain.service)的配置与[ngrok_server_domain.service](ngrok_service_domain.service)的类似。

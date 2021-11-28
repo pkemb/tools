@@ -87,7 +87,7 @@ cd $workdir
 rm -f rootCA.key rootCA.pem device.key device.csr device.crt
 echo "start generate certificate"
 openssl genrsa -out rootCA.key 2048 > /dev/null 2>&1
-check_certificate_file rootCA.key 
+check_certificate_file rootCA.key
 
 openssl req -x509 -new -nodes -key rootCA.key -subj "/CN=$domain" -days 5000 -out rootCA.pem > /dev/null 2>&1
 check_certificate_file rootCA.pem
@@ -98,7 +98,7 @@ check_certificate_file device.key
 openssl req -new -key device.key -subj "/CN=$domain" -out device.csr > /dev/null 2>&1
 check_certificate_file device.csr
 
-openssl x509 -req -in device.csr -CA rootCA.pem -CAkey rootCA.key -CAcreateserial -out device.crt -days 5000 > /dev/null2>&1
+openssl x509 -req -in device.csr -CA rootCA.pem -CAkey rootCA.key -CAcreateserial -out device.crt -days 5000 > /dev/null 2>&1
 check_certificate_file device.crt
 
 echo "start replace certificate"
@@ -110,13 +110,61 @@ cp -f device.key assets/server/tls/snakeoil.key
 echo "start compilation"
 GOOS=$GOOS_server GOARCH=$GOARCH_server make release-server
 if [ $? != 0 ]; then
-	echo "server compilation error, please compile manually"
+	echo "server compilation error, please compile again"
 	echo "command: GOOS=$GOOS_server GOARCH=$GOARCH_server make release-server"
+	exit 1
 fi
 
 GOOS=$GOOS_client GOARCH=$GOARCH_client make release-client
 if [ $? != 0 ]; then
-	echo "client compilation error, please compile manually"
+	echo "client compilation error, please compile again"
 	echo "command: GOOS=$GOOS_client GOARCH=$GOARCH_client make release-server"
+	exit 1
 fi
 
+NGROKD_SH="ngrokd.sh"
+NGROK_SERVICE="ngrok_server.service"
+
+echo "generate ${NGROKD_SH}"
+
+cat > ${NGROKD_SH} << EOF
+#!/bin/bash
+
+BASE_DIR="$PWD"
+DOMAIN="$domain"
+
+\${BASE_DIR}/bin/ngrokd \\
+        -tlsKey=\${BASE_DIR}/assets/server/tls/snakeoil.key \\
+        -tlsCrt=\${BASE_DIR}/assets/server/tls/snakeoil.crt \\
+        -domain=\${DOMAIN} \\
+        -httpAddr=:88 \\
+        -httpsAddr=:444 \\
+        -tunnelAddr=:4443 \\
+EOF
+
+chmod +x ${NGROKD_SH}
+
+echo "generate ${NGROK_SERVICE}"
+
+cat > ${NGROK_SERVICE} << EOF
+[Unit]
+Description=ngrok server domain
+
+[Service]
+Type=simple
+ExecStart=/bin/bash ${PWD}/${NGROKD_SH}
+KillMode=control-group
+KillMode=control-group
+ExecReload=/bin/kill -HUP $MAINPID
+Restart=always
+RestartSec=10s
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+echo "copy ${PWD}/${NGROK_SERVICE} to /lib/systemd/system"
+sudo cp ${PWD}/${NGROK_SERVICE} /lib/systemd/system
+echo "start service: systemctl start ${NGROK_SERVICE}"
+echo "stop  service: systemctl stop  ${NGROK_SERVICE}"
+echo "auto start service when boot: systemctl enable ${NGROK_SERVICE}"
