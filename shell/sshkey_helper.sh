@@ -52,7 +52,7 @@ if ! type -t ssh-keygen > /dev/null; then
     exit 1
 fi
 
-IDENTITY_FILE=~/.ssh/id_rsa_${USER}_${HOST}
+IDENTITY_FILE=~/.ssh/id_rsa_`hostname`_${USER}_${HOST}
 
 if [ -f "${IDENTITY_FILE}" ]; then
     echo "${IDENTITY_FILE} exits"
@@ -64,7 +64,7 @@ mkdir -p ~/.ssh
 # https://www.man7.org/linux/man-pages/man1/ssh-keygen.1.html
 ssh-keygen \
     -t RSA \
-    -C "${USER}_${HOST}" \
+    -C "sshkey_helper_`hostname`_${USER}_${HOST}" \
     -f ${IDENTITY_FILE} \
     -N ""
 
