@@ -1,0 +1,82 @@
+#!/bin/bash
+
+function logE() {
+    echo "$*" >&2
+}
+
+function check_var() {
+    for var_name in $@; do
+        eval local var_val=\$$var_name
+        if [ ! "$var_val" ]; then
+            logE "$var_name is NULL, please check"
+            exit 1
+        fi
+    done
+}
+
+function check_command() {
+    for command in $@; do
+        if [ ! "$(type -t $command)" ]; then
+            logE "command $command not found, please install first"
+            exit 1
+        fi
+    done
+}
+
+check_command curl base64
+
+function usage() {
+    logE "Usage: $0 change_url"
+    logE ""
+    logE "Download patch on Gerrit site via REST API"
+    logE ""
+    logE "gerrit change url format, revision is optional"
+    logE "    \${gerrit_site}/c/\${repo_path}/+/\${change_id}/\${revision}"
+    logE ""
+    logE "change url sample"
+    logE "    https://gerrit-review.googlesource.com/c/plugins/healthcheck/+/335051"
+    logE "    https://gerrit-review.googlesource.com/c/plugins/healthcheck/+/335051/1"
+    exit 1
+}
+
+url=$1
+[ "$url" ] || usage
+
+info=$(echo $url | sed 's!\(https\?://.\+\)/c/\(.\+\)/+/\([0-9]\+\)\(/\([0-9]\+\)\)\?!\1 \2 \3 \5!g')
+if [ "$info" = "$url" ]; then
+    logE "gerrit change url is invalid, please check"
+    usage
+    exit 1
+fi
+
+# Multiple variable assignment
+# https://stackoverflow.com/questions/1952404/linux-bash-multiple-variable-assignment
+read site repo changeid revision <<< $(echo "$info")
+[ "$revision" ] || revision="current"
+check_var site repo changeid revision
+
+# curl option
+#   -s Silent or quiet mode. Don't show progress meter or error messages.
+#   -n Makes curl scan the .netrc (_netrc on Windows) file in the user's home directory for login name and password.
+# gerrit doc for get patch
+#   https://gerrit-review.googlesource.com/Documentation/rest-api-changes.html#get-patch
+base64_patch=$(curl -s -n "${site}/a/changes/${changeid}/revisions/${revision}/patch")
+RET=$?
+if [ "$RET" != "0" ]; then
+    logE "curl error, ret = $RET"
+    exit $RET
+fi
+
+# check error result
+if [ "$(echo $base64_patch | grep -E '^Not\ found')" ]; then
+    logE $base64_patch
+    logE "please check url: $url"
+    exit 1
+fi
+if [ "$(echo $base64_patch | grep -E '^Unauthorized')" ]; then
+    logE $base64_patch
+    logE "please check ~/.netrc"
+    exit 1
+fi
+
+echo "$base64_patch" | base64 -d
