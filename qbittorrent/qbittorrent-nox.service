@@ -1,0 +1,11 @@
+[Unit]
+Description=qbittorrent-nox
+After=local-fs.target
+
+[Service]
+User=root
+Type=simple
+ExecStart=/usr/bin/qbittorrent-nox --webui-port=9002 --profile=/etc/qBittorrent
+
+[Install]
+WantedBy=multi-user.target
