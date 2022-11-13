@@ -52,7 +52,7 @@ if ! type -t ssh-keygen > /dev/null; then
     exit 1
 fi
 
-IDENTITY_FILE=~/.ssh/id_rsa_`hostname`_${USER}_${HOST}
+IDENTITY_FILE="~/.ssh/id_rsa_$(hostname)_${USER}_${HOST}"
 
 if [ -f "${IDENTITY_FILE}" ]; then
     echo "${IDENTITY_FILE} exits"
@@ -64,24 +64,26 @@ mkdir -p ~/.ssh
 # https://www.man7.org/linux/man-pages/man1/ssh-keygen.1.html
 ssh-keygen \
     -t RSA \
-    -C "sshkey_helper_`hostname`_${USER}_${HOST}" \
-    -f ${IDENTITY_FILE} \
+    -C "sshkey_helper_$(hostname)_${USER}_${HOST}" \
+    -f "${IDENTITY_FILE}" \
     -N ""
 
-{
-    echo ""
-    echo "Host ${HOST}"
-    echo "HostName ${HOST}"
-    echo "User ${USER}"
-    echo "Port ${PORT}"
-    echo "IdentityFile ${IDENTITY_FILE}"
-    echo ""
-} >> ~/.ssh/config
+cat >> ~/.ssh/config << EOF
+
+Host ${HOST}
+    HostName ${HOST}
+    User ${USER}
+    Port ${PORT}
+    IdentityFile ${IDENTITY_FILE}
+
+EOF
+
+chmod 600 ~/.ssh/config
 
 if [ $JUST_PRINT = "1" ]; then
     echo "public key is:"
     echo ""
-    cat ${IDENTITY_FILE}.pub
+    cat "${IDENTITY_FILE}.pub"
 else
-    ssh-copy-id -i ${IDENTITY_FILE} -p ${PORT} ${USER}@${HOST}
+    ssh-copy-id -i "${IDENTITY_FILE}" -p ${PORT} "${USER}@${HOST}"
 fi
