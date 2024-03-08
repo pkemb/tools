@@ -3,6 +3,7 @@ from requests import Session
 import logging as log
 import sys
 import argparse
+from bs4 import BeautifulSoup
 
 class SSPanel():
     agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36"
@@ -43,6 +44,23 @@ class SSPanel():
         msg = r.json()['msg']
         log.info(f'checkin msg: {msg}')
         return r
+
+    def get_clash_link(self):
+        params = {
+            "os": "linux",
+            "client": "clash"
+        }
+        r = self.session.get(self.url + "/user/tutorial", params=params)
+        if r.status_code!= 200:
+            raise Exception(f'get clash link failed: {r.status_code}')
+        soup = BeautifulSoup(r.text, 'html.parser')
+        for code_tag in soup.find_all('code'):
+            if code_tag.text.startswith('wget '):
+                link = code_tag.text.split('"')[1]
+                log.info(f'clash link: {link}')
+                return link
+        log.warn('clash link not found')
+        return None
 
 def main():
     parser = argparse.ArgumentParser()
